@@ -5,12 +5,14 @@ namespace ZMF
     public static class ZMFDataHelper
     {
         //Funkcije za Upisivanje podataka u ZMF atribute
-        public static ZMFData EMTtoZMF(EMTData emtData)
+        public static ZMFData EMTtoZMF(EMTData emtData, EMTData eetData, EMTData amtData)
         {
             ZMFData zmfData = new ZMFData();
             //zmfData.Status="01";
             //zmfData.Modus_Genehmigung="B";
             //Status and genehmigung su upisani dole u Horizont
+            zmfData.WKN = WriteWKN(amtData);
+            zmfData.ISIN = WriteISIN(emtData);
             zmfData.Kundenkat = WriteKundenkat(emtData, "Y");
             zmfData.Ziele = WriteZiele(emtData, "Y");
             (zmfData.Status, zmfData.Modus_Genehmigung, zmfData.Horizont) = WriteHorizont(emtData);
@@ -25,12 +27,49 @@ namespace ZMF
             zmfData.Neg_Erfahrung = WriteErfahrung(emtData, "N");
             zmfData.Prodkat = WriteProdkat(emtData);
             zmfData.Genehmigungsp = WriteGenehmigungsp(emtData);
-            zmfData.SustainPreference = WriteSustainPreference(emtData);
-            zmfData.SustainMainFocus = WriteSustainMainFocus(emtData);
-            zmfData.SustainLabel = WriteSustainLabel(emtData);
+            zmfData.SustainPreference = WriteSustainPreference(eetData);
+            zmfData.SustainMainFocus = WriteSustainMainFocus(eetData);
+            zmfData.SustainLabel = WriteSustainLabel(eetData);
             return zmfData;
         }
 
+        private static List<string> WriteWKN(EMTData amtData)
+        {
+            var amtRowNum = amtData.Kolone[1].Redovi.Count;
+            List<string> wkn = new List<string>();
+            for (int i = 6; i < amtRowNum; i++)
+            {
+                string value = "";
+                foreach (EMT.ColumnInfo col in amtData.Kolone)
+                {
+                    if (col.Naziv.Substring(0, 10) == "OFST020015")
+                    {
+                        value = col.Redovi[i];
+                    }
+                }
+                wkn.Add(value);
+            }
+            return wkn;
+        }
+
+        public static List<string> WriteISIN(EMTData emtData)
+        {
+            var emtRowNum = emtData.Kolone[1].Redovi.Count;
+            List<string> isin = new List<string>();
+            for (int i = 0; i < emtRowNum; i++)
+            {
+                string value = "";
+                foreach (EMT.ColumnInfo col in emtData.Kolone)
+                {
+                    if (col.Naziv.Substring(0, 5) == "00010")
+                    {
+                        value += col.Redovi[i];
+                    }
+                }
+                isin.Add(value);
+            }
+            return isin;
+        }
         public static List<string> WriteKundenkat(EMTData emtData, string x)
         {
             var emtRowNum = emtData.Kolone[1].Redovi.Count;
@@ -48,13 +87,6 @@ namespace ZMF
                         if (x == col.Redovi[i])
                         {
                             IsA = true;
-                        }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            break;
                         }
                     }
                     if (col.Naziv == "01020_Investor_Type_Professional")
@@ -98,30 +130,14 @@ namespace ZMF
                         {
                             IsA = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
-                        }
                     }
-                    if ((col.Naziv.Substring(0, 5) == "05010" ||
+                    if (col.Naziv.Substring(0, 5) == "05010" ||
                     col.Naziv.Substring(0, 5) == "05020" ||
-                    col.Naziv.Substring(0, 5) == "05030"))
+                    col.Naziv.Substring(0, 5) == "05030")
                     {
                         if (x == col.Redovi[i])
                         {
                             IsB = true;
-                        }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
                         }
                     }
                     if (col.Naziv.Substring(0, 5) == "05050")
@@ -130,28 +146,13 @@ namespace ZMF
                         {
                             IsC = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
-                        }
+
                     }
                     if (col.Naziv.Substring(0, 5) == "05040")
                     {
                         if (x == col.Redovi[i])
                         {
                             IsD = true;
-                        }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
                         }
                     }
                 }
@@ -205,7 +206,7 @@ namespace ZMF
                 if (IsA) value += "A#";
                 if (IsB) value += "B#";
                 if (IsC) value += "C#";
-                status.Add("1");
+                status.Add("01");
                 genehmigung.Add("B");
                 horizont.Add(value);
             }
@@ -217,25 +218,25 @@ namespace ZMF
             List<string> tragfaehigkeit = new List<string>();
             for (int i = 0; i < emtRowNum; i++)
             {
-                bool IsA = false;
+                bool IsY10 = false;
+                bool IsY20 = false;
                 bool IsB = false;
                 bool IsC = false;
                 string value = "";
                 foreach (EMT.ColumnInfo col in emtData.Kolone)
                 {
-                    if ((col.Naziv.Substring(0, 5) == "03010" ||
-                    col.Naziv.Substring(0, 5) == "03020"))
+                    if (col.Naziv.Substring(0, 5) == "03010")
                     {
                         if (x == col.Redovi[i])
                         {
-                            IsA = true;
+                            IsY10 = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
+                    }
+                    if (col.Naziv.Substring(0, 5) == "03020")
+                    {
+                        if (x == col.Redovi[i])
                         {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            break;
+                            IsY20 = true;
                         }
                     }
                     if (col.Naziv.Substring(0, 5) == "03040")
@@ -244,13 +245,6 @@ namespace ZMF
                         {
                             IsB = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            break;
-                        }
                     }
                     if (col.Naziv.Substring(0, 5) == "03050")
                     {
@@ -258,18 +252,11 @@ namespace ZMF
                         {
                             IsC = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            break;
-                        }
                     }
                 }
-                if (IsA) value += "A#";
-                if (IsB) value += "B#";
-                if (IsC) value += "C#";
+                if (IsY10 || IsY20) value = "A";
+                if (IsB) value = "B";
+                if (IsC) value = "C";
                 tragfaehigkeit.Add(value);
             }
             return tragfaehigkeit;
@@ -293,28 +280,12 @@ namespace ZMF
                         {
                             IsA = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
-                        }
                     }
                     if (col.Naziv.Substring(0, 5) == "02020")
                     {
                         if (x == col.Redovi[i])
                         {
                             IsB = true;
-                        }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
                         }
                     }
                     if (col.Naziv.Substring(0, 5) == "02030")
@@ -323,14 +294,6 @@ namespace ZMF
                         {
                             IsC = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
-                        }
                     }
                     if (col.Naziv.Substring(0, 5) == "02040")
                     {
@@ -338,20 +301,12 @@ namespace ZMF
                         {
                             IsD = true;
                         }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsD = false;
-                            break;
-                        }
                     }
                 }
-                if (IsA) value += "A#";
-                if (IsB) value += "B#";
-                if (IsC) value += "C#";
-                if (IsD) value += "D#";
+                if (IsA) value = "A";
+                if (IsB) value = "B";
+                if (IsC) value = "C";
+                if (IsD) value = "D";
                 erfahrung.Add(value);
             }
             return erfahrung;
@@ -466,14 +421,6 @@ namespace ZMF
                         {
                             IsA = true;
                             IsB = true;
-                        }
-                        if ("Neutral" == col.Redovi[i])
-                        {
-                            IsA = false;
-                            IsB = false;
-                            IsC = false;
-                            IsZ = false;
-                            break;
                         }
                     }
                     if (col.Naziv.Substring(0, 5) == "05115")
@@ -630,14 +577,14 @@ namespace ZMF
             }
             return gnehmigungsp;
         }
-        public static List<string> WriteSustainPreference(EMTData emtData)
+        public static List<string> WriteSustainPreference(EMTData eetData)
         {
-            var emtRowNum = emtData.Kolone[1].Redovi.Count;
+            var emtRowNum = eetData.Kolone[1].Redovi.Count;
             List<string> sustainPreference = new List<string>();
             for (int i = 0; i < emtRowNum; i++)
             {
                 string value = "";
-                foreach (EMT.ColumnInfo col in emtData.Kolone)
+                foreach (EMT.ColumnInfo col in eetData.Kolone)
                 {
                     if (col.Naziv.Substring(0, 5) == "60440")
                     {
@@ -655,14 +602,14 @@ namespace ZMF
             }
             return sustainPreference;
         }
-        public static List<string> WriteSustainMainFocus(EMTData emtData)
+        public static List<string> WriteSustainMainFocus(EMTData eetData)
         {
-            var emtRowNum = emtData.Kolone[1].Redovi.Count;
+            var emtRowNum = eetData.Kolone[1].Redovi.Count;
             List<string> sustainMainFocus = new List<string>();
             for (int i = 0; i < emtRowNum; i++)
             {
                 string value = "";
-                foreach (EMT.ColumnInfo col in emtData.Kolone)
+                foreach (EMT.ColumnInfo col in eetData.Kolone)
                 {
                     if (col.Naziv.Substring(0, 5) == "20090")
                     {
@@ -684,33 +631,33 @@ namespace ZMF
             }
             return sustainMainFocus;
         }
-        public static List<string> WriteSustainLabel(EMTData emtData)
+        public static List<string> WriteSustainLabel(EMTData eetData)
         {
-            var emtRowNum = emtData.Kolone[1].Redovi.Count;
+            var emtRowNum = eetData.Kolone[1].Redovi.Count;
             List<string> sustainLabel = new List<string>();
             for (int i = 0; i < emtRowNum; i++)
             {
                 string value = "";
-                foreach (EMT.ColumnInfo col in emtData.Kolone)
+                foreach (EMT.ColumnInfo col in eetData.Kolone)
                 {
                     if (col.Naziv.Substring(0, 5) == "20060")
                     {
                         switch (col.Redovi[i])
                         {
-                            case "1": value = "A"; break;
-                            case "2": value = "B"; break;
-                            case "3": value = "C"; break;
-                            case "4": value = "D"; break;
-                            case "5": value = "E"; break;
-                            case "6": value = "F"; break;
-                            case "7": value = "G"; break;
-                            case "8": value = "H"; break;
-                            case "9": value = "I"; break;
-                            case "10": value = "J"; break;
-                            case "11": value = "K"; break;
-                            case "12": value = "L"; break;
-                            case "13": value = "M"; break;
-                            case "14": value = "N"; break;
+                            case "A": value = "1"; break;
+                            case "C": value = "3"; break;
+                            case "D": value = "4"; break;
+                            case "B": value = "2"; break;
+                            case "E": value = "5"; break;
+                            case "F": value = "6"; break;
+                            case "G": value = "7"; break;
+                            case "H": value = "8"; break;
+                            case "I": value = "9"; break;
+                            case "J": value = "10"; break;
+                            case "K": value = "11"; break;
+                            case "L": value = "12"; break;
+                            case "M": value = "13"; break;
+                            case "N": value = "14"; break;
                             default: value = ""; break;
                         }
                     }

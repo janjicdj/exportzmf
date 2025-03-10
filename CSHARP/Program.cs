@@ -2,41 +2,46 @@
 using EMT;
 using ZMF;
 using KTF;
+using JV;
 
 class Program
 {
     static void Main(string[] args)
     {
         // Putanja do Excel fajla
-        string filePath = @"D:\C#\Test\Import\Orion-EMT_LU_4_2-20240930_CL v4.2.xlsx"; // Zamenite sa stvarnom putanjom do fajla
+        string EMTfilePath = @"..\Pareto Files for Test\Import\20241120_ EMT-V42 _ PARETO SICAV _ 20241119.xlsx"; // Zamenite sa stvarnom putanjom do fajla
+        string EETfilePath = @"..\Pareto Files for Test\Import\20241212_ EET-V112 _ PARETO SICAV _ 20241211.xlsx"; // Zamenite sa stvarnom putanjom do fajla
+        string AMTfilePath = @"..\Pareto Files for Test\Import\AMT_Pareto AMT_20241107_150008_571.xlsx"; // Zamenite sa stvarnom putanjom do fajla
 
         // Kreiraj objekat koji će čuvati podatke o kolonama
-        EMTData emtData = EMTDataHelper.LoadEMT(filePath); // Pozivamo funkciju iz EMTDataHelper klase
+        //Tip podatka je EMTData ali u taj tip podatka cuvamo i amt i eet
+        EMTData emtData = EMTDataHelper.LoadEMT(EMTfilePath); // Pozivamo funkciju iz EMTDataHelper klase
+        EMTData eetData = EMTDataHelper.LoadEMT(EETfilePath); // Pozivamo funkciju iz EMTDataHelper klase
+        EMTData amtData = EMTDataHelper.LoadEMT(AMTfilePath); // Pozivamo funkciju iz EMTDataHelper klase
 
         // Meni za korisnika
         Console.WriteLine("Dobrodošli u program za obradu podataka!");
 
-        Console.WriteLine("Molimo unesite ime ZMF fajla (bez ekstenzije):");
-        string csvFileZMFName = Console.ReadLine() ?? string.Empty;
-        string csvFileZMFPath = @$"D:\C#\Test\Export\{csvFileZMFName}.csv";
+        Console.WriteLine("Molimo unesite ime fajlova (bez ekstenzije):");
+        string subname = Console.ReadLine() ?? string.Empty;
+        string csvFileZMFPath = @$"..\ZMF,KTF,JV - TEST\ZMF{subname}.csv";
 
-        //Console.WriteLine("Molimo unesite ime KTF fajla (bez ekstenzije):");
-        //string csvFileKTFName = Console.ReadLine() ?? string.Empty;
-        //string csvFileKTFPath = @$"C:\Users\HP\Documents\ZMF,KTF,JV - TEST\KTF{csvFileKTFName}.csv";
+        string csvFileKTFPath = @$"..\ZMF,KTF,JV - TEST\KTF{subname}.csv";
 
-        //Console.WriteLine("Molimo unesite ime JV fajla (bez ekstenzije):");
-        //string csvFileJVName = Console.ReadLine() ?? string.Empty;
-        //string csvFileJVPath = @$"C:\Users\HP\Documents\ZMF,KTF,JV - TEST\JV{csvFileJVName}.csv";
+        string csvFileJVPath = @$"..\ZMF,KTF,JV - TEST\JV{subname}.csv";
 
-        Console.WriteLine($"Vaš CSV fajl će biti sačuvan na lokaciji: {csvFileZMFPath}");
+        Console.WriteLine($"Vaši CSV fajlovi će biti sačuvan na lokaciji: {csvFileZMFPath}");
 
-        ZMFData zmfData = ZMFDataHelper.EMTtoZMF(emtData);
+        ZMFData zmfData = ZMFDataHelper.EMTtoZMF(emtData, eetData, amtData);
         ZMFDataHelper.SaveZMFDataToCSV(zmfData, csvFileZMFPath);
 
-        //KTFData ktfData = KTFDataHelper.EMTtoKTF(emtData);
-        //KTFDataHelper.SaveKTFDataToCSV(ktfData, csvFileKTFPath);
+        KTFData ktfData = KTFDataHelper.EMTtoKTF(emtData, amtData);
+        KTFDataHelper.SaveKTFDataToCSV(ktfData, csvFileKTFPath);
 
-        Console.WriteLine("Podaci su uspešno upisani u CSV fajl!");
+        JVData jvData = JVDataHelper.EMTtoJV(amtData, emtData);
+        JVDataHelper.SaveJVDataToCSV(jvData, csvFileJVPath);
+
+        Console.WriteLine("Podaci su uspešno upisani u CSV fajlove!");
     }
 }
 
